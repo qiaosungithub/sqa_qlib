@@ -20,13 +20,13 @@ port_analysis_config: &port_analysis_config
     backtest:
         start_time: 2017-01-01
         end_time: 2020-08-01
-        account: 100000000
+        account: 100000000 # 初始资金
         benchmark: *benchmark
         exchange_kwargs:
-            limit_threshold: 0.095
+            limit_threshold: 0.095 # 涨跌停阈值
             deal_price: close
-            open_cost: 0.0005
-            close_cost: 0.0015
+            open_cost: 0.0005 # 买入手续费率
+            close_cost: 0.0015 # 卖出手续费率
             min_cost: 5
 task:
     model:
@@ -43,7 +43,7 @@ task:
             num_leaves: 210
             num_threads: 20
     dataset:
-        class: DatasetH
+        class: DatasetH # default
         module_path: qlib.data.dataset
         kwargs:
             handler:

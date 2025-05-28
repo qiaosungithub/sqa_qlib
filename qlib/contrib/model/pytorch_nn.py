@@ -125,7 +125,7 @@ class DNNModelPytorch(Model):
 
         if loss not in {"mse", "binary"}:
             raise NotImplementedError("loss {} is not supported!".format(loss))
-        self._scorer = mean_squared_error if loss == "mse" else roc_auc_score
+        self._scorer = mean_squared_error if loss == "mse" else roc_auc_score # acc
 
         if init_model is None:
             self.dnn_model = init_instance_by_config({"class": pt_model_uri, "kwargs": pt_model_kwargs})
@@ -145,19 +145,19 @@ class DNNModelPytorch(Model):
         else:
             raise NotImplementedError("optimizer {} is not supported!".format(optimizer))
 
-        if scheduler == "default":
+        if scheduler == "default": # reduce lr when loss has stopped decreasing
             # In torch version 2.7.0, the verbose parameter has been removed. Reference Link:
             # https://github.com/pytorch/pytorch/pull/147301/files#diff-036a7470d5307f13c9a6a51c3a65dd014f00ca02f476c545488cd856bea9bcf2L1313
             if str(torch.__version__).split("+", maxsplit=1)[0] <= "2.6.0":
                 # Reduce learning rate when loss has stopped decrease
                 self.scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(  # pylint: disable=E1123
                     self.train_optimizer,
-                    mode="min",
+                    mode="min", # the lower the loss, the better
                     factor=0.5,
                     patience=10,
                     verbose=True,
-                    threshold=0.0001,
-                    threshold_mode="rel",
+                    threshold=0.0001, # only care about changes > threshold
+                    threshold_mode="rel", # relative
                     cooldown=0,
                     min_lr=0.00001,
                     eps=1e-08,
@@ -196,9 +196,11 @@ class DNNModelPytorch(Model):
     ):
         has_valid = "valid" in dataset.segments
         segments = ["train", "valid"]
-        vars = ["x", "y", "w"]
+        vars = ["x", "y", "w"] # w is weight for each data
         all_df = defaultdict(dict)  # x_train, x_valid y_train, y_valid w_train, w_valid
         all_t = defaultdict(dict)  # tensors
+
+        # prepare all data
         for seg in segments:
             if seg in dataset.segments:
                 # df_train df_valid
