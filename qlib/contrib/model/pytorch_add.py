@@ -52,7 +52,7 @@ class ADD(Model):
         dec_dropout=0.0,
         n_epochs=200,
         lr=0.001,
-        metric="mse",
+        metric="mse", # can use ic
         batch_size=5000,
         early_stop=20,
         base_model="GRU",
@@ -178,6 +178,7 @@ class ADD(Model):
         return pre_market_loss
 
     def loss_pre(self, pred_excess, label_excess, pred_market, label_market, record=None):
+        # mse on excess and cross entropy on market
         pre_loss = self.loss_pre_excess(pred_excess, label_excess, record) + self.loss_pre_market(
             pred_market, label_market, record
         )
@@ -199,6 +200,7 @@ class ADD(Model):
         return adv_market_loss
 
     def loss_adv(self, adv_excess, label_excess, adv_market, label_market, record=None):
+        # also MSE on excess and cross entropy on market
         adv_loss = self.loss_adv_excess(adv_excess, label_excess, record) + self.loss_adv_market(
             adv_market, label_market, record
         )
@@ -264,7 +266,7 @@ class ADD(Model):
 
             metrics = {}
             preds = self.ADD_model(feature)
-            self.loss_fn(feature, preds, label_excess, label_market, metrics)
+            self.loss_fn(feature, preds, label_excess, label_market, metrics) # get record in metrics
             metrics.update(self.cal_ic_metrics(preds["excess"], label_excess))
             metrics_list.append(metrics)
         metrics = {}
@@ -349,6 +351,7 @@ class ADD(Model):
         return best_score
 
     def gen_market_label(self, df, raw_label):
+        # add domain (0/1/2) to dataframe
         market_label = raw_label.groupby("datetime", group_keys=False).mean().squeeze()
         bins = [-np.inf, self.lo, self.hi, np.inf]
         market_label = pd.cut(market_label, bins, labels=False)
@@ -356,7 +359,7 @@ class ADD(Model):
         df = df.join(market_label)
         return df
 
-    def fit_thresh(self, train_label):
+    def fit_thresh(self, train_label: pd.DataFrame):
         market_label = train_label.groupby("datetime", group_keys=False).mean().squeeze()
         self.lo, self.hi = market_label.quantile([1 / 3, 2 / 3])
 
@@ -377,7 +380,7 @@ class ADD(Model):
             col_set=["feature", "label"],
             data_key=DataHandlerLP.DK_L,
         )
-        df_train = self.gen_market_label(df_train, label_train)
+        df_train = self.gen_market_label(df_train, label_train) # add a market label to the data frame. the market label is 0 or 1 or 2, which indicates the market return is low, medium or high.
         df_valid = self.gen_market_label(df_valid, label_valid)
 
         x_train, y_train, m_train = df_train["feature"], df_train["label"], df_train["market_return"]
@@ -398,6 +401,7 @@ class ADD(Model):
             self.logger.info("Loading pretrained model...")
             pretrained_model.load_state_dict(torch.load(self.model_path, map_location=self.device))
 
+            # copy into both encoders
             model_dict = self.ADD_model.enc_excess.state_dict()
             pretrained_dict = {k: v for k, v in pretrained_model.rnn.state_dict().items() if k in model_dict}
             model_dict.update(pretrained_dict)
@@ -480,7 +484,7 @@ class ADDModel(nn.Module):
             raise ValueError("unknown base model name `%s`" % base_model)
         self.dec = Decoder(d_feat, 2 * hidden_size, num_layers, dec_dropout, base_model)
 
-        ctx_size = hidden_size * num_layers
+        ctx_size = hidden_size * num_layers # hidden state size
         self.pred_excess, self.adv_excess = [
             nn.Sequential(nn.Linear(ctx_size, ctx_size), nn.BatchNorm1d(ctx_size), nn.Tanh(), nn.Linear(ctx_size, 1))
             for _ in range(2)
@@ -495,12 +499,14 @@ class ADDModel(nn.Module):
         x = x.reshape(len(x), self.d_feat, -1)
         N = x.shape[0]
         T = x.shape[-1]
-        x = x.permute(0, 2, 1)
+        x = x.permute(0, 2, 1) # (N, T, C), N is number of stocks, C is feature dim per stock
 
         out, hidden_excess = self.enc_excess(x)
         out, hidden_market = self.enc_market(x)
         if self.base_model == "LSTM":
-            feature_excess = hidden_excess[0].permute(1, 0, 2).reshape(N, -1)
+            # note that the output of LSTM is a tuple (output, (h_n, c_n))
+            # h_n shape (num_layers, N, hidden_size)
+            feature_excess = hidden_excess[0].permute(1, 0, 2).reshape(N, -1) # (N, num_layers * hidden_size)
             feature_market = hidden_market[0].permute(1, 0, 2).reshape(N, -1)
         else:
             feature_excess = hidden_excess.permute(1, 0, 2).reshape(N, -1)
@@ -508,8 +514,9 @@ class ADDModel(nn.Module):
         predicts = {}
         predicts["excess"] = self.pred_excess(feature_excess).squeeze(1)
         predicts["market"] = self.pred_market(feature_market)
-        predicts["adv_market"] = self.adv_market(self.before_adv_market(feature_excess))
+        predicts["adv_market"] = self.adv_market(self.before_adv_market(feature_excess)) # note that here the adv_market uses the excess encoder. In another word, we want the excess encoder to learn domain-independent feature.
         predicts["adv_excess"] = self.adv_excess(self.before_adv_excess(feature_market).squeeze(1))
+        # use decoder to reconstruct
         if self.base_model == "LSTM":
             hidden = [torch.cat([hidden_excess[i], hidden_market[i]], -1) for i in range(2)]
         else:
@@ -558,6 +565,7 @@ class Decoder(nn.Module):
 
 
 class RevGradFunc(Function):
+    # ctx: context object, to pass information to backward
     @staticmethod
     def forward(ctx, input_, alpha_):
         ctx.save_for_backward(input_, alpha_)
@@ -579,6 +587,8 @@ class RevGrad(nn.Module):
         A gradient reversal layer.
         This layer has no parameters, and simply reverses the gradient
         in the backward pass.
+
+        Essentially only 1 parameter: alpha. gamma decides alpha schedule
         """
         super().__init__(*args, **kwargs)
 
@@ -588,6 +598,7 @@ class RevGrad(nn.Module):
         self._p = 0
 
     def step_alpha(self):
+        # alpha is a time evolving parameter, for gradient scaling
         self._p += 1
         self._alpha = min(
             self.gamma_clip, torch.tensor(2 / (1 + math.exp(-self.gamma * self._p)) - 1, requires_grad=False)
