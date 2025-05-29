@@ -374,7 +374,7 @@ class ADD(Model):
             col_set=["label"],
             data_key=DataHandlerLP.DK_R,
         )
-        self.fit_thresh(label_train)
+        self.fit_thresh(label_train) # preprocess
         df_train, df_valid = dataset.prepare(
             ["train", "valid"],
             col_set=["feature", "label"],
@@ -427,6 +427,7 @@ class ADD(Model):
         x_values = x_test.values
         preds = []
 
+        # organize the train data into daily batches
         daily_index, daily_count = self.get_daily_inter(x_test, shuffle=False)
 
         for idx, count in zip(daily_index, daily_count):
