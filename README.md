@@ -2,6 +2,9 @@ sqa forked
 
 run transformer with alpha360:
 - `qrun examples/benchmarks/Transformer/workflow_config_transformer_Alpha360.yaml`
+- `pip install . & python qlib/workflow/cli.py examples/benchmarks/Transformer/workflow_config_transformer_Alpha360.yaml`
+
+region cn data: shape (478007)
 
 ---
 

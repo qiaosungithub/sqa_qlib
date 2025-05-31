@@ -67,6 +67,11 @@ class TransformerModel(Model):
             torch.manual_seed(self.seed)
 
         self.model = Transformer(d_feat, d_model, nhead, num_layers, dropout, self.device)
+
+        # print number of parameters
+        num_params = sum(p.numel() for p in self.model.parameters() if p.requires_grad)
+        self.logger.info("Number of parameters: {}".format(num_params))
+
         if optimizer.lower() == "adam":
             self.train_optimizer = optim.Adam(self.model.parameters(), lr=self.lr, weight_decay=self.reg)
         elif optimizer.lower() == "gd":
@@ -104,6 +109,12 @@ class TransformerModel(Model):
     def train_epoch(self, x_train, y_train):
         x_train_values = x_train.values
         y_train_values = np.squeeze(y_train.values)
+
+        # print the shape of training data
+        self.logger.info("train data shape: %s, %s" % (x_train_values.shape, y_train_values.shape))
+        # shape (478007, 360) (478007,)
+        # 478007 = num_stocks * num_days. Here we view this as batch (independent samples).
+        # 360: 6 features each day, flatten 60 days
 
         self.model.train()
 
