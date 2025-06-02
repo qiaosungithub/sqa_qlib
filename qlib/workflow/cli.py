@@ -102,7 +102,7 @@ def workflow(config_path, experiment_name="workflow", uri_folder="mlruns"):
         market: csi300
 
     """
-    # Render the template
+    # Render the template (load config from yaml file)
     rendered_yaml = render_template(config_path)
     yaml = YAML(typ="safe", pure=True)
     config = yaml.load(rendered_yaml)
@@ -137,14 +137,14 @@ def workflow(config_path, experiment_name="workflow", uri_folder="mlruns"):
 
     if "exp_manager" in config.get("qlib_init"):
         qlib.init(**config.get("qlib_init"))
-    else:
+    else: # default manager
         exp_manager = C["exp_manager"]
         exp_manager["kwargs"]["uri"] = "file:" + str(Path(os.getcwd()).resolve() / uri_folder)
         qlib.init(**config.get("qlib_init"), exp_manager=exp_manager)
 
     if "experiment_name" in config:
         experiment_name = config["experiment_name"]
-    recorder = task_train(config.get("task"), experiment_name=experiment_name)
+    recorder = task_train(config.get("task"), experiment_name=experiment_name) # train, eval and test
     recorder.save_objects(config=config)
 
 

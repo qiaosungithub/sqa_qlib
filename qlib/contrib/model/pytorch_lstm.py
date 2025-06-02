@@ -116,8 +116,8 @@ class LSTM(Model):
             dropout=self.dropout,
         )
         if optimizer.lower() == "adam":
-            self.train_optimizer = optim.Adam(self.lstm_model.parameters(), lr=self.lr)
-        elif optimizer.lower() == "gd":
+            self.train_optimizer = optim.Adam(self.lstm_model.parameters(), betas=(0.9, 0.95), lr=self.lr)
+        elif optimizer.lower() == "sgd":
             self.train_optimizer = optim.SGD(self.lstm_model.parameters(), lr=self.lr)
         else:
             raise NotImplementedError("optimizer {} is not supported!".format(optimizer))

@@ -51,12 +51,13 @@ task:
             hidden_size: 64
             num_layers: 2
             dropout: 0.0
-            n_epochs: 200
+            n_epochs: 20
             lr: 5e-4
-            early_stop: 20
+            early_stop: 8
             batch_size: 200
             metric: loss
             loss: mse
+            optimizer: sgd
             GPU: 0
     dataset:
         class: DatasetH
@@ -85,3 +86,5 @@ task:
           module_path: qlib.workflow.record_temp
           kwargs: 
             config: *port_analysis_config
+
+sqabuzhidaonalixielogdirname: lstm-bs200-lr5e-4-sgd-20ep

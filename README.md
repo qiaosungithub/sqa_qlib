@@ -7,9 +7,18 @@ run transformer with alpha360:
 - `pip install . & python qlib/workflow/cli.py examples/benchmarks/Transformer/workflow_config_transformer_Alpha360.yaml`
 
 run lstm with alpha360:
-- `pip install . & python qlib/workflow/cli.py examples/benchmarks/LSTM/workflow_config_lstm_Alpha360.yaml`
+```bash
+pip install .
+python qlib/workflow/cli.py examples/benchmarks/LSTM/workflow_config_lstm_Alpha360.yaml
+```
 
 region cn data: shape (478007)
+
+# structure
+
+model definition: qlib/contrib/model/
+
+task run: function `_exe_task` in qlib/model/trainer.py
 
 # results
 
