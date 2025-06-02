@@ -1,10 +1,27 @@
 sqa forked
 
+# commands
+
 run transformer with alpha360:
 - `qrun examples/benchmarks/Transformer/workflow_config_transformer_Alpha360.yaml`
 - `pip install . & python qlib/workflow/cli.py examples/benchmarks/Transformer/workflow_config_transformer_Alpha360.yaml`
 
+run lstm with alpha360:
+- `pip install . & python qlib/workflow/cli.py examples/benchmarks/LSTM/workflow_config_lstm_Alpha360.yaml`
+
 region cn data: shape (478007)
+
+# results
+
+Metric: IC, alpha360 dataset
+
+reported:
+- lstm: 0.0448
+- transformer: 0.0114
+- SOTA: (HIST) 0.0522
+
+Ours:
+- lstm: 0.0480 (bs200)
 
 ---
 

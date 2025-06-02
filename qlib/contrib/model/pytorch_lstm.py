@@ -248,7 +248,7 @@ class LSTM(Model):
                 best_param = copy.deepcopy(self.lstm_model.state_dict())
             else:
                 stop_steps += 1
-                if stop_steps >= self.early_stop:
+                if stop_steps >= self.early_stop: # early stop means the accumulated eps without improvement
                     self.logger.info("early stop")
                     break
 
