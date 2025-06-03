@@ -8,7 +8,7 @@ from __future__ import print_function
 import numpy as np
 import pandas as pd
 from typing import Text, Union
-import copy
+import copy, wandb
 from ...utils import get_or_create_path
 from ...log import get_module_logger
 
@@ -19,6 +19,7 @@ import torch.optim as optim
 from ...model.base import Model
 from ...data.dataset import DatasetH
 from ...data.dataset.handler import DataHandlerLP
+from ...utils.logging_utils import print_params
 
 
 class LSTM(Model):
@@ -51,6 +52,7 @@ class LSTM(Model):
         optimizer="adam",
         GPU=0,
         seed=None,
+        wandb=False,
         **kwargs,
     ):
         # Set logger.
@@ -71,6 +73,7 @@ class LSTM(Model):
         self.loss = loss
         self.device = torch.device("cuda:%d" % (GPU) if torch.cuda.is_available() and GPU >= 0 else "cpu")
         self.seed = seed
+        self.wandb = wandb
 
         self.logger.info(
             "LSTM parameters setting:"
@@ -115,6 +118,7 @@ class LSTM(Model):
             num_layers=self.num_layers,
             dropout=self.dropout,
         )
+        print_params(self.lstm_model, self.logger)
         if optimizer.lower() == "adam":
             self.train_optimizer = optim.Adam(self.lstm_model.parameters(), betas=(0.9, 0.95), lr=self.lr)
         elif optimizer.lower() == "sgd":
@@ -207,6 +211,7 @@ class LSTM(Model):
         evals_result=dict(),
         save_path=None,
     ):
+        
         df_train, df_valid, df_test = dataset.prepare(
             ["train", "valid", "test"],
             col_set=["feature", "label"],
@@ -237,6 +242,13 @@ class LSTM(Model):
             self.logger.info("evaluating...")
             train_loss, train_score = self.test_epoch(x_train, y_train)
             val_loss, val_score = self.test_epoch(x_valid, y_valid)
+            if self.wandb:
+                wandb.log(
+                    {
+                        "train_loss": train_loss,
+                        "valid_loss": val_loss,
+                    }, step=step
+                )
             self.logger.info("train %.6f, valid %.6f" % (train_score, val_score))
             evals_result["train"].append(train_score)
             evals_result["valid"].append(val_score)

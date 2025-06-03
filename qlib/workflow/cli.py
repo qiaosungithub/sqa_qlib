@@ -5,7 +5,7 @@ import os
 from pathlib import Path
 import sys
 
-import fire
+import fire, wandb
 from jinja2 import Template, meta
 from ruamel.yaml import YAML
 
@@ -134,6 +134,9 @@ def workflow(config_path, experiment_name="workflow", uri_folder="mlruns"):
 
     # config the `sys` section
     sys_config(config, config_path)
+
+    if config["task"]["model"]["kwargs"].get("wandb", False):
+        wandb.init(project="qlib", dir=str(Path(os.getcwd()).resolve() / uri_folder), config=config, name=config["wandb_name"])
 
     if "exp_manager" in config.get("qlib_init"):
         qlib.init(**config.get("qlib_init"))
